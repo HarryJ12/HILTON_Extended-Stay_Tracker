@@ -8,6 +8,18 @@ import (
 )
 
 func main() {
+
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+
+		defer ticker.Stop()
+
+		for {
+			runAgent()
+			<-ticker.C
+		}
+	}()
+
 	db := initDB()
 
 	r := gin.New()

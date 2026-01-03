@@ -12,19 +12,25 @@ func deleteGuest(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
+		_, err := db.Exec("DELETE FROM notifications WHERE guest_id = ?", id)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "db error"})
+			return
+		}
+
 		res, err := db.Exec("DELETE FROM guests WHERE id = ?", id)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+			c.JSON(500, gin.H{"error": "db error"})
 			return
 		}
 
 		rows, _ := res.RowsAffected()
 		if rows == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "guest not found"})
+			c.JSON(404, gin.H{"error": "guest not found"})
 			return
 		}
 
-		c.Status(http.StatusNoContent)
+		c.Status(204)
 	}
 }
 
@@ -32,8 +38,7 @@ func getGuests(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := db.Query(`
 			SELECT g.id, g.name, g.room_number, g.monthly_rate,
-			       g.check_in_date, g.contact,
-			       MAX(n.sent_at)
+			       g.check_in_date, g.contact
 			FROM guests g
 			LEFT JOIN notifications n ON g.id = n.guest_id
 			GROUP BY g.id
@@ -49,11 +54,10 @@ func getGuests(db *sql.DB) gin.HandlerFunc {
 
 		for rows.Next() {
 			var g Guest
-			var lastReminder sql.NullTime
 
 			err := rows.Scan(
 				&g.ID, &g.Name, &g.RoomNumber, &g.MonthlyRate,
-				&g.CheckInDate, &g.Contact, &lastReminder,
+				&g.CheckInDate, &g.Contact,
 			)
 			if err != nil {
 				continue
@@ -61,26 +65,22 @@ func getGuests(db *sql.DB) gin.HandlerFunc {
 
 			g.MonthsStayed = monthsStayed(g.CheckInDate, now)
 
-			if lastReminder.Valid {
-				g.LastReminder = &lastReminder.Time
-			}
-
 			guests = append(guests, g)
 		}
 
 		c.JSON(http.StatusOK, guests)
+
 	}
 }
 
 func createGuest(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input struct {
-			Name         string     `json:"name"`
-			Contact      string     `json:"contact"`
-			RoomNumber   string     `json:"room_number"`
-			MonthlyRate  int        `json:"monthly_rate"`
-			CheckInDate  string     `json:"check_in_date"`
-			LastReminder *time.Time `json:"last_reminder"`
+			Name        string `json:"name"`
+			Contact     string `json:"contact"`
+			RoomNumber  string `json:"room_number"`
+			MonthlyRate int    `json:"monthly_rate"`
+			CheckInDate string `json:"check_in_date"`
 		}
 
 		if err := c.BindJSON(&input); err != nil {
@@ -110,6 +110,7 @@ func createGuest(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.Status(http.StatusCreated)
+		runAgent()
 	}
 }
 

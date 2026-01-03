@@ -21,14 +21,12 @@ func initDB() *sql.DB {
 		room_number TEXT NOT NULL,
 		monthly_rate INTEGER NOT NULL,
 		check_in_date DATE NOT NULL,
-		contact TEXT NOT NULL,
-		last_reminder DATE
+		contact TEXT NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS notifications (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		guest_id INTEGER NOT NULL,
-		
 		month_number INTEGER NOT NULL,
 		sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE (guest_id, month_number)

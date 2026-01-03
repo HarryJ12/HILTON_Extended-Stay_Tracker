@@ -12,7 +12,6 @@ async function loadGuests() {
     <strong>${g.name}</strong> (Room ${g.room_number})<br>
     <span>Contact:</span> ${g.contact}<br>
     <span>Check-In:</span> ${g.check_in_date.split("T")[0]}<br>
-    <span>Last Reminder:</span> ${g.last_reminder ?? "N/A"}<br>
   `;
 
   const delBtn = document.createElement("button");
@@ -48,8 +47,7 @@ document.getElementById("guestForm").addEventListener("submit", async e => {
       contact: document.getElementById("contact").value,
       room_number: document.getElementById("room").value,
       monthly_rate: parseInt(document.getElementById("rate").value, 10),
-      check_in_date: document.getElementById("checkin").value,
-      last_reminder: null
+      check_in_date: document.getElementById("checkin").value
     })
   });
 

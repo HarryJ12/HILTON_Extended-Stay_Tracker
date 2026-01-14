@@ -1,5 +1,6 @@
 async function loadGuests() {
-  const res = await fetch("http://localhost:8080/guests");
+  // const res = await fetch("http://localhost:8080/guests");
+  const res = await fetch("/api/guests");
   const guests = await res.json();
 
   const list = document.getElementById("guestList");
@@ -9,9 +10,10 @@ async function loadGuests() {
     const li = document.createElement("li");
 
   li.innerHTML = `
-    <strong>${g.name}</strong> (Room ${g.room_number})<br>
-    <span>Contact:</span> ${g.contact}<br>
-    <span>Check-In:</span> ${g.check_in_date.split("T")[0]}<br>
+    <strong>${g.name}</strong> <br>
+    <span>Room Number:</span> ${g.room_number}<br>
+    <span>Check-In Date:</span> ${g.check_in_date.split("T")[0]}<br>
+    <span>Contact Information:</span> ${g.contact}<br>
   `;
 
   const delBtn = document.createElement("button");
@@ -19,7 +21,8 @@ async function loadGuests() {
   delBtn.style.marginTop = "3px";  
 
     delBtn.onclick = async () => {
-      const res = await fetch(`http://localhost:8080/guests/${g.id}`, {
+      // const res = await fetch(`http://localhost:8080/guests/${g.id}`, {
+      const res = await fetch(`/api/guests/${g.id}`, {
         method: "DELETE"
       });
 
@@ -39,14 +42,15 @@ async function loadGuests() {
 document.getElementById("guestForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  await fetch("http://localhost:8080/guests", {
+  // await fetch("http://localhost:8080/guests", {
+  await fetch("/api/guests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: document.getElementById("name").value,
       contact: document.getElementById("contact").value,
       room_number: document.getElementById("room").value,
-      monthly_rate: parseInt(document.getElementById("rate").value, 10),
+      daily_rate: parseInt(document.getElementById("rate").value, 10),
       check_in_date: document.getElementById("checkin").value
     })
   });

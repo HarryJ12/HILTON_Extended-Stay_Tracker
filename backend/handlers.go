@@ -18,6 +18,7 @@ func deleteGuest(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// 2. delete guest
 		res, err := db.Exec("DELETE FROM guests WHERE id = ?", id)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "db error"})
@@ -37,7 +38,7 @@ func deleteGuest(db *sql.DB) gin.HandlerFunc {
 func getGuests(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rows, err := db.Query(`
-			SELECT g.id, g.name, g.room_number, g.monthly_rate,
+			SELECT g.id, g.name, g.room_number, g.daily_rate,
 			       g.check_in_date, g.contact
 			FROM guests g
 			LEFT JOIN notifications n ON g.id = n.guest_id
@@ -56,14 +57,14 @@ func getGuests(db *sql.DB) gin.HandlerFunc {
 			var g Guest
 
 			err := rows.Scan(
-				&g.ID, &g.Name, &g.RoomNumber, &g.MonthlyRate,
+				&g.ID, &g.Name, &g.RoomNumber, &g.DailyRate,
 				&g.CheckInDate, &g.Contact,
 			)
 			if err != nil {
 				continue
 			}
 
-			g.MonthsStayed = monthsStayed(g.CheckInDate, now)
+			g.WeeksStayed = weeksStayed(g.CheckInDate, now)
 
 			guests = append(guests, g)
 		}
@@ -79,7 +80,7 @@ func createGuest(db *sql.DB) gin.HandlerFunc {
 			Name        string `json:"name"`
 			Contact     string `json:"contact"`
 			RoomNumber  string `json:"room_number"`
-			MonthlyRate int    `json:"monthly_rate"`
+			DailyRate   int    `json:"daily_rate"`
 			CheckInDate string `json:"check_in_date"`
 		}
 
@@ -95,11 +96,11 @@ func createGuest(db *sql.DB) gin.HandlerFunc {
 		}
 
 		_, err = db.Exec(
-			`INSERT INTO guests (name, room_number, monthly_rate, check_in_date, contact)
+			`INSERT INTO guests (name, room_number, daily_rate, check_in_date, contact)
 			 VALUES (?, ?, ?, ?, ?)`,
 			input.Name,
 			input.RoomNumber,
-			input.MonthlyRate,
+			input.DailyRate,
 			checkIn.UTC(),
 			input.Contact,
 		)
@@ -114,19 +115,13 @@ func createGuest(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func monthsStayed(checkIn time.Time, now time.Time) int {
-	yearDiff := now.Year() - checkIn.Year()
-	monthDiff := int(now.Month()) - int(checkIn.Month())
-
-	months := yearDiff*12 + monthDiff
-
-	if now.Day() < checkIn.Day() {
-		months--
-	}
-
-	if months < 0 {
+func weeksStayed(checkIn, now time.Time) int {
+	if now.Before(checkIn) {
 		return 0
 	}
 
-	return months
+	days := int(now.Sub(checkIn).Hours() / 24)
+	weeks := days / 7
+
+	return weeks
 }

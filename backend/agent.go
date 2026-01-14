@@ -17,14 +17,13 @@ func runAgent() {
 	}
 	defer agentDB.Close()
 
-	// Prevent SQLITE_BUSY garbage
 	agentDB.Exec("PRAGMA journal_mode=WAL;")
 	agentDB.Exec("PRAGMA busy_timeout = 5000;")
 
 	now := time.Now().UTC()
 
 	rows, err := agentDB.Query(`
-		SELECT id, name, room_number, monthly_rate, check_in_date, contact
+		SELECT id, name, room_number, daily_rate, check_in_date, contact
 		FROM guests
 	`)
 	if err != nil {
@@ -38,7 +37,7 @@ func runAgent() {
 		name    string
 		room    string
 		rate    int
-		month   int
+		week    int
 		contact string
 	}
 
@@ -65,8 +64,8 @@ func runAgent() {
 			continue
 		}
 
-		months := monthsStayed(checkIn, now)
-		if months < 1 {
+		weeks := weeksStayed(checkIn, now)
+		if weeks < 1 {
 			continue
 		}
 
@@ -75,16 +74,16 @@ func runAgent() {
 			name:    name,
 			room:    room,
 			rate:    rate,
-			month:   months,
+			week:    weeks,
 			contact: contact,
 		})
 	}
 
 	for _, g := range toNotify {
 		res, err := agentDB.Exec(`
-			INSERT OR IGNORE INTO notifications (guest_id, month_number)
+			INSERT OR IGNORE INTO notifications (guest_id, period_number)
 			VALUES (?, ?)
-		`, g.id, g.month)
+		`, g.id, g.week)
 
 		if err != nil {
 			log.Println("Agent error: insert failed")
@@ -99,15 +98,14 @@ func runAgent() {
 		subject := "Extended-Stay Guest Billing Reminder"
 
 		body := fmt.Sprintf(
-			"Monthly billing reminder\n\n"+
-				"Guest: %s\n"+
+			"Weekly Billing Reminder for: \n"+"%s\n\n"+
 				"Room: %s\n"+
-				"Month: %d\n"+
-				"Rate: $%d\n"+
+				"Weeks Stayed: %d\n"+
+				"Daily Rate: $%d\n"+
 				"Contact Information: %s\n",
 			g.name,
 			g.room,
-			g.month,
+			g.week,
 			g.rate,
 			g.contact,
 		)

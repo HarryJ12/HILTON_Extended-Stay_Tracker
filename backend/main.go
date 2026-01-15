@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/gin-contrib/cors"
+	// "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,14 +26,19 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5500"},
-		AllowMethods:     []string{"GET", "POST", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: false,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Static("/static", "../frontend")
+	r.GET("/", func(c *gin.Context) {
+		c.File("../frontend/index.html")
+	})
+
+	// r.Use(cors.New(cors.Config{
+	// 	AllowOrigins:     []string{"http://localhost:5500"},
+	// 	AllowMethods:     []string{"GET", "POST", "DELETE", "OPTIONS"},
+	// 	AllowHeaders:     []string{"Content-Type"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: false,
+	// 	MaxAge:           12 * time.Hour,
+	// }))
 
 	r.POST("/guests", createGuest(db))
 	r.GET("/guests", getGuests(db))

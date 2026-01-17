@@ -150,11 +150,9 @@ python3 -m http.server 5500
 
 Then open in browser:
 
-```
+```bash
 http://localhost:5500/
-
 ```
-
 > ⚠️ When running frontend locally, certain configuration changes are required
 > 
 > 

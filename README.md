@@ -44,7 +44,6 @@ No policy violations and no missed billing.
 
 - **DigitalOcean Droplet (Ubuntu Linux)**
     
-    
 - **systemd-managed Go Binary** allowing:    
     - Automatic startup on boot
     - Automatic restarts on failure
@@ -95,6 +94,13 @@ This setup provides a simple, secure, and restart-safe deployment pipeline
 ### Environment Variables
 
 Add the environment variables to your `~/.zshrc` file so they are automatically loaded in every terminal session.
+    - Example environment file:
+    
+        ```
+        BREVO_API_KEY=your_key_here
+        EMAIL_FROM=your_email_here
+        MANAGER_EMAIL=your_email_here
+        ```
 
 ```bash
 nano ~/.zshrc

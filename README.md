@@ -49,7 +49,7 @@ No policy violations and no missed billing.
     - Automatic restarts on failure
     - Unattended, long-running operation
 
-- **Environment-Based Configuration** ensures sensitive configuration is loaded from a secure environment file and attached to the systemd service so it is not exposed.
+- **Environment-Based Configuration** ensures sensitive configuration is loaded from a secure environment file and attached to the `systemd` service so it is not exposed.
     - Example `/etc/extended-stay.env`:
     
         ```bash

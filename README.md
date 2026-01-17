@@ -1,12 +1,10 @@
-# Extended Stay Tracker
+# Hilton Hotel Extended Stay Tracker
 
 A lightweight internal web application that helps hotel managers reliably track extended-stay guests and receive **weekly billing reminders** without violating hospitality policies.
 
+## Why This Exists
 
-
-## Why This Exists (The Real Problem)
-
-At Hilton properties, extended-stay guests **cannot be bombarded with billing reminders** due to hospitality standards and customer experience policies.
+At Hilton properties, *hospitality and customer-experience policies restrict the use of repeated billing reminders* for extended-stay guests.
 
 That creates a real operational problem:
 

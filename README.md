@@ -60,8 +60,6 @@ No policy violations and no missed billing.
 
 This setup provides a simple, secure, and restart-safe deployment pipeline
 
----
-
 ## Database Design
 
 **guests**
@@ -72,8 +70,6 @@ This setup provides a simple, secure, and restart-safe deployment pipeline
 
 - Tracks which billing reminders have already been sent
 - Uses `(guest_id, period_number)` with a `UNIQUE` constraint to prevent duplicate reminders
-
----
 
 ## How It Works
 
@@ -93,8 +89,6 @@ This setup provides a simple, secure, and restart-safe deployment pipeline
     - Weeks stayed
     - Daily rate
     - Contact information
-
----
 
 ## Local Development Setup
 
@@ -160,5 +154,3 @@ http://localhost:5500/
 > 
 > (commented out by default, only for local testing)
 > 
-
----

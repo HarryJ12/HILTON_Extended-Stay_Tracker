@@ -1,192 +1,68 @@
 # Hilton Hotel Extended Stay Tracker
 
-A lightweight internal web application that helps hotel managers reliably track extended-stay guests and receive **weekly billing reminders** without violating hospitality policies.
+A lightweight internal web application that helps hotel managers reliably track extended-stay guests and receive **weekly billing reminders**.
+
+---
 
 ## Why This Exists
 
 At Hilton properties, **hospitality and customer-experience policies restrict the use of repeated billing reminders** for extended-stay guests.
 
-That creates a real operational problem:
+Extended-stay guests **must be billed on time**, but this policy causes a few issues:
 
-- Extended-stay guests must be billed on a **weekly cadence**
 - Managers are juggling dozens of guests across different check-in dates
-- Missing a billing window = revenue leakage
+- Missing a billing window leads to delayed or inaccurate billing reporting
 - Manual reminders (notes, spreadsheets, memory) are unreliable
 
-**This app solves that by shifting reminders away from guests and onto the manager.**
+**This app solves that by shifting reminders away from guests and onto the manager**:
 
-The system:
-
-- Tracks extended-stay guests internally
+- Tracks extended-stay guests internally after guest details are manually entered
 - Calculates how many weeks each guest has stayed
 - Sends a **single, guaranteed, once-per-week email reminder** to the manager
-- Never contacts the guest directly
 
-No guest spam. No policy violations. No missed billing.
-
----
-
-## High-Level Architecture
-
-**Backend**
-
-- Go (Gin framework)
-- SQLite database
-- Background agent running every 24 hours
-- Email delivery via Brevo (HTTP API)
-
-**Frontend**
-
-- Plain HTML + JavaScript
-- Served directly by the Go backend
-- No framework, no build step, no nonsense
-
-**Deployment**
-
-- DigitalOcean Droplet (Linux)
-- Go binary managed by `systemd`
-- Environment variables stored outside GitHub
-- GitHub Actions used for auto-deploy on `main`
+No policy violations and no missed billing.
 
 ---
 
-## How It Works (End-to-End)
+## Architecture
 
-1. Manager adds an extended-stay guest through the web UI
-2. Guest data is stored in SQLite (`guests` table)
-3. A background agent:
-    - Runs on startup
-    - Runs every 24 hours after that
-4. For each guest, the agent:
-    - Computes weeks stayed from check-in date
-    - Checks if a reminder for that week already exists
-    - Sends **exactly one email per guest per week**
-    - Records the send in a `notifications` table to prevent duplicates
-5. Manager receives a clean billing reminder email with:
-    - Guest name
-    - Room number
-    - Weeks stayed
-    - Daily rate
-    - Contact info
+### Backend
 
-This design guarantees **idempotency**:
+- **Go (Gin framework)** handles all HTTP routing, request validation, and API responses. Also serves the frontend files directly.
+    
+- **SQLite Database** stores guest records and notification history. A unique constraint ensures billing reminders are sent once per guest per billing period, even across restarts.
+    
+- **Background Agent (24-hour interval)** runs automatically on startup and every 24 hours thereafter. The agent:
+    - Calculates how long each guest has stayed
+    - Determines whether a billing reminder is due
+    - Sends a reminder only if one has not already been sent for that period
+- **Email Delivery (Brevo HTTP API)** sends billing reminders to the manager using Brevo’s transactional email API over HTTP. 
 
-If the server restarts, crashes, or redeploys, reminders are **never duplicated**.
+### Frontend
 
----
+- Minimal **HTML + JavaScript** frontend used by staff to add, view, and remove extended-stay guests.
 
-## Local Development Setup
+    - Static frontend files are served directly by the Go application
+    
+### Deployment
 
-### Backend (Go API + Agent)
+- **DigitalOcean Droplet (Ubuntu Linux)**
+    
+    
+- **systemd-managed Go Binary** allowing:    
+    - Automatic startup on boot
+    - Automatic restarts on failure
+    - Unattended, long-running operation
 
-```bash
-go run .
+- **Environment-Based Configuration** ensures sensitive configuration is loaded from a secure environment file and attached to the `systemd` service so it is not exposed.
 
-```
+- **GitHub Actions (Auto-Deploy):** Every push to the `main` branch triggers a deployment workflow that:
+    
+    - SSHs into the DigitalOcean droplet
+    - Pulls the latest code
+    - Restarts the `systemd` service
 
-- Runs the API on `http://localhost:8080`
-- Automatically initializes SQLite (`data.db`)
-- Starts the background billing agent
-
-### Frontend (Local Only)
-
-```bash
-python3 -m http.server 5500
-
-```
-
-Then open:
-
-```
-http://localhost:5500/
-
-```
-
-> ⚠️ When running frontend separately, CORS must be enabled in main.go
-> 
-> 
-> (commented out by default, only for local testing)
-> 
-
----
-
-## Production Deployment (DigitalOcean)
-
-### Environment Variables
-
-Stored **on the server**, not in GitHub:
-
-```bash
-cd /opt
-nano /etc/extended-stay.env
-
-```
-
-Example:
-
-```
-BREVO_API_KEY=your_brevo_api_key
-EMAIL_FROM=billing.notifications@yourdomain.com
-MANAGER_EMAIL=manager@example.com
-
-```
-
-Reload and restart:
-
-```bash
-systemctl daemon-reload
-systemctl restart extended-stay
-
-```
-
-Verify:
-
-```bash
-systemctl show extended-stay -p Environment |tr' ''\n'
-
-```
-
----
-
-## GitHub Actions Auto-Deploy
-
-Every push to `main` triggers deployment.
-
-**What happens automatically:**
-
-1. GitHub Action SSHs into the DigitalOcean droplet
-2. Pulls the latest code
-3. Hard-resets to `origin/main`
-4. Restarts the systemd service
-
-```yaml
-name:Deploy
-
-on:
-push:
-branches: ["main"]
-
-jobs:
-deploy:
-runs-on:ubuntu-latest
-steps:
--name:SSHpull+restart
-uses:appleboy/ssh-action@v1.0.3
-with:
-host:${{secrets.DO_HOST}}
-username:${{secrets.DO_USER}}
-key:${{secrets.DO_SSH_KEY}}
-script: |
-            set -e
-            cd /opt/extended-stay
-            git fetch --all
-            git reset --hard origin/main
-            systemctl restart extended-stay
-            systemctl status extended-stay --no-pager -l | head -n 60
-
-```
-
-No manual SSH. No manual restarts. No drift.
+This setup provides a simple, secure, and restart-safe deployment pipeline
 
 ---
 
@@ -194,62 +70,99 @@ No manual SSH. No manual restarts. No drift.
 
 **guests**
 
-- Stores extended-stay guest details
+- Stores extended-stay guest information used for billing and tracking
 
 **notifications**
 
-- Records `(guest_id, period_number)`
-- Enforced UNIQUE constraint
-- Guarantees one reminder per guest per billing period
-
-This is what makes the system **restart-safe and duplicate-proof**.
+- Tracks which billing reminders have already been sent
+- Uses `(guest_id, period_number)` with a `UNIQUE` constraint to prevent duplicate reminders
 
 ---
 
-## Key Design Decisions (Why This Is Solid)
+## How It Works
 
-- **SQLite**
-    
-    Single-tenant, low-traffic internal tool → zero reason for Postgres overhead.
-    
-- **systemd**
-    
-    Ensures the service:
-    
-    - Starts on boot
-    - Restarts on failure
-    - Runs unattended
-- **Background Agent**
-    
-    No cron jobs, no external schedulers, no race conditions.
-    
-- **Email to Manager Only**
-    
-    Complies with hospitality policies while preserving billing accuracy.
-    
+1. Manager or staff adds an extended-stay guest through the web UI
+2. Guest information is persisted in SQLite
+3. A background agent runs:
+    - On application startup
+    - After a new guest is added
+    - Every 24 hours
+4. For each guest, the agent:
+    - Calculates weeks stayed from the check-in date
+    - Determines whether a reminder has already been sent for the current period
+    - Sends **exactly one billing reminder per guest per week**
+5. The manager receives an email containing:
+    - Guest name
+    - Room number
+    - Weeks stayed
+    - Daily rate
+    - Contact information
 
 ---
 
-## Who This Is For
+## Local Development Setup
 
-- Hotel property managers
-- Front desk supervisors
-- Operations staff handling extended-stay billing
+### Environment Variables
 
-This is **not** a consumer-facing app.
+Add the environment variables to your `~/.zshrc` file so they are automatically loaded in every terminal session.
 
-It’s an internal reliability tool.
+```bash
+nano ~/.zshrc
+
+```
+
+Add the following lines:
+
+```bash
+export BREVO_API_KEY=your_key_here
+export EMAIL_FROM=your_email_here
+export MANAGER_EMAIL=your_email_here
+
+```
+
+Save and reload:
+
+```bash
+source ~/.zshrc
+
+```
+
+Verify:
+
+```bash
+echo$BREVO_API_KEY
+
+```
+
+### Backend (Go API + Agent)
+
+From the project root:
+```bash
+cd /backend
+go run .
+
+```
+
+### Frontend
+
+In a new terminal, from the project root:
+```bash
+cd /frontend
+python3 -m http.server 5500
+
+```
+
+Then open in browser:
+
+```
+http://localhost:5500/
+
+```
+
+> ⚠️ When running frontend locally, certain configuration changes are required
+> 
+> 
+> (commented out by default, only for local testing)
+> 
 
 ---
-
-## Status
-
-✔ Deployed
-
-✔ In production
-
-✔ Restart-safe
-
-✔ Duplicate-proof
-
-✔ Policy-compliant

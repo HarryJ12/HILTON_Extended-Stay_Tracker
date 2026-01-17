@@ -52,7 +52,7 @@ No policy violations and no missed billing.
 - **Environment-Based Configuration** ensures sensitive configuration is loaded from a secure environment file and attached to the `systemd` service so it is not exposed.
     - Example environment file:
     
-        ```
+        ```bash
         BREVO_API_KEY=your_key_here
         EMAIL_FROM=your_email_here
         MANAGER_EMAIL=your_email_here

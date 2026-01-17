@@ -1,4 +1,4 @@
-# Hilton Hotel Extended Stay Tracker
+# Hilton Hotels Extended Stay Tracker
 
 A lightweight internal web application that helps hotel managers reliably track extended-stay guests and receive **weekly billing reminders**.
 
